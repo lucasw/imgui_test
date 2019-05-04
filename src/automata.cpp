@@ -49,7 +49,7 @@ bool Person::update(cv::Mat& map)
     } else if (y_move_max_ < 0) {
       --ny;
     }
-    if (ny < map.rows) {
+    if (static_cast<int>(ny) < map.rows) {
       const auto val = map.at<uint8_t>(ny, x_);
       if (val > 0) {
         new_y_ = ny;
@@ -69,7 +69,7 @@ bool Person::update(cv::Mat& map)
       --nx;
     }
 
-    if (nx < map.cols) {
+    if (static_cast<int>(nx) < map.cols) {
       const auto val = map.at<uint8_t>(y_, nx);
       if (val > 0) {
         new_x_ = nx;

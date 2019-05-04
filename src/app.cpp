@@ -90,9 +90,10 @@ void App::drawImage()
         image_.at<cv::Vec3b>(y, x) = col;
         dirty = true;
       }
-      col = image_.at<cv::Vec3b>(y, x);
+      hovered_col_ = image_.at<cv::Vec3b>(y, x);
+      hovered_x_ = x;
+      hovered_y_ = y;
     }
-    ImGui::Text("%d %d, %d %d %d, %d", x, y, col[0], col[1], col[2], clicked);
   }
 
   if (dirty) {
@@ -102,6 +103,16 @@ void App::drawImage()
 
 }
 
+void App::displayImageInfo()
+{
+  // Draw small box with the hovered color in it
+  ImGui::Text("%04d %04d, r %02x g %02x b %02x",
+      hovered_x_, hovered_y_,
+      hovered_col_[0], hovered_col_[1], hovered_col_[2]);
+      // clicked);
+}
+
+// TODO(lucasw) delete this or put it in a utility file somewhere
 void App::drawPrimitives()
 {
   ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -128,36 +139,43 @@ void App::draw()
 
   bool is_open = true;
 
+  ImVec2 pos, sz;
+
   {
-    ImGui::SetNextWindowPos(pos_);
-    ImGui::SetNextWindowSize(ImVec2(size_.x * 0.25, size_.y));
-    ImGui::Begin("app test", &is_open, window_flags_);
+    pos = pos_;
+    sz = ImVec2(size_.x * 0.25, size_.y * 0.9);
+    ImGui::SetNextWindowPos(pos);
+    ImGui::SetNextWindowSize(sz);
+    ImGui::Begin("controls", &is_open, window_flags_);
     if (is_open) {
       drawControls();
     }
     ImGui::End();
   }
 
-  // bool mouse_over_image = false;
-  ImGui::SetNextWindowPos(ImVec2(pos_.x + size_.x * 0.25, pos_.y));
-  ImGui::SetNextWindowSize(ImVec2(size_.x * 0.75, size_.y));
-  ImGui::Begin("app image", &is_open, window_flags_);
+  {
+    pos = ImVec2(pos.x, pos.y + sz.y);
+    sz = ImVec2(sz.x, size_.y - sz.y);
+    ImGui::SetNextWindowPos(pos);
+    ImGui::SetNextWindowSize(sz);
+    ImGui::Begin("image info", &is_open, window_flags_);
+    displayImageInfo();
+    ImGui::End();
+  }
 
-  if (is_open) {
-    if (ImGui::BeginTabBar("##TabBar")) {
-      if (ImGui::BeginTabItem("Image")) {
-        drawImage();
-        ImGui::EndTabItem();
-      }  // Image Tab
+  {
+    // bool mouse_over_image = false;
+    pos = ImVec2(pos.x + sz.x, 0);
+    sz = ImVec2(size_.x - sz.x, size_.y);
+    ImGui::SetNextWindowPos(pos);
+    ImGui::SetNextWindowSize(sz);
+    ImGui::Begin("image display", &is_open, window_flags_);
 
-      if (ImGui::BeginTabItem("Draw")) {
-        drawPrimitives();
-        ImGui::EndTabItem();
-      }  // Draw primitives
-      ImGui::EndTabBar();
+    if (is_open) {
+      drawImage();
     }
-  }  // if open
-
+    ImGui::End();
+  }
 #if 0
   // if (mouse_over_image)
   {
@@ -169,7 +187,6 @@ void App::draw()
 
   mouse_over_image_ = mouse_over_image;
 #endif
-  ImGui::End();
 }
 
 bool App::droppedFile(const std::string name)

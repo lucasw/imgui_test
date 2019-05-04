@@ -114,9 +114,12 @@ int main(int, char**)
 
   ImVec4 clear_color = ImVec4(0.55f, 0.53f, 0.50f, 1.00f);
 
-  imgui_test::App app(ImVec2(width, height));
+#if 0
   imgui_test::Automata automata(ImVec2(width, height));
   automata.droppedFile("../automata_sfml/data/map.png");
+#else
+  imgui_test::App app(ImVec2(width, height));
+#endif
 
   ImGui::GetStyle().WindowRounding = 0.0f;// <- Set this on init or use ImGui::PushStyleVar()
   ImGui::GetStyle().ChildRounding = 0.0f;
@@ -156,23 +159,22 @@ int main(int, char**)
     ImGui::NewFrame();
 
     // do all the imgui draws
-    // if (ImGui::BeginTabBar("##MainTabBar")) {
-    {
-      #if 0
+    #if 1
+    if (ImGui::BeginTabBar("##MainTabBar")) {
       if (ImGui::BeginTabItem("Test App")) {
         app.droppedFile(new_dropped_file);
         app.draw();
         ImGui::EndTabItem();
       }
-      #endif
-      // if (ImGui::BeginTabItem("Automata")) {
-        automata.droppedFile(new_dropped_file);
-        automata.update();
-        automata.draw();
-      //  ImGui::EndTabItem();
-      // }
-      // ImGui::EndTabBar();
+      ImGui::EndTabBar();
     }
+    #else
+    {
+      automata.droppedFile(new_dropped_file);
+      automata.update();
+      automata.draw();
+    }
+    #endif
 
     // Rendering
     ImGui::Render();

@@ -18,7 +18,16 @@ public:
 
   void drawControls();
   void drawImage();
+  // draw the image that lies within the currently selected box,
+  // or what would become the next image box if the user creates one at the current
+  // hovered position.
+  // void drawImageBox();
+  void displayImageInfo();
   void drawPrimitives();
+
+  cv::Vec3b hovered_col_;
+  int hovered_x_ = 0;
+  int hovered_y_ = 0;
 
   cv::Mat image_;
   float mouse_wheel_ = 0.0;
