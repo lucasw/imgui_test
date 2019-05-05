@@ -85,14 +85,18 @@ void App::drawImage()
     return;
   }
 
-  ImVec2 image_size;
-  image_size.x = image.cols * zoom_;
-  image_size.y = image.rows * zoom_;
-
   ImVec2 win_sz = ImGui::GetWindowSize();
   bool dirty = false;
 
-  float region_width = ImGui::GetWindowContentRegionWidth();
+  const float region_width = ImGui::GetWindowContentRegionWidth();
+  const float rel_zoom_x = static_cast<float>(region_width) / image.cols;
+  const float region_height = win_sz.y - 16;
+  const float rel_zoom_y = static_cast<float>(region_height) / image.rows;
+  const float rel_zoom = (rel_zoom_x > rel_zoom_y) ? rel_zoom_y : rel_zoom_x;
+  ImVec2 image_size;
+  image_size.x = image.cols * zoom_ * rel_zoom;
+  image_size.y = image.rows * zoom_ * rel_zoom;
+
   // const ImVec2 uv0(-10.0, -10.0);  // = win_sz * 0.5 - image_size * 0.5;
   // const ImVec2 uv1(10.0, 10.0);  //  = win_sz * 0.5 + image_size * 0.5;
   // ImGui::Text("%f %f, %f %f", win_sz.x, win_sz.y, pos.x, pos.y);
@@ -100,7 +104,6 @@ void App::drawImage()
     ImGui::SetCursorPosX((region_width - image_size.x) * 0.5);
   }
   // float region_height = ImGui::GetWindowContentRegionHeight();
-  float region_height = win_sz.y;
   if (image_size.y < region_height) {
     ImGui::SetCursorPosY((region_height - image_size.y) * 0.5);
   }
