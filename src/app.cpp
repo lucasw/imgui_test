@@ -109,6 +109,14 @@ void App::drawImage()
     ImGui::SetCursorPosY((region_height - image_size.y) * 0.5);
   }
   ImVec2 screen_pos1 = ImGui::GetCursorScreenPos();
+
+  auto screen_to_image_coords = [zoom = zoom_ * rel_zoom, screen_pos1](ImVec2 pos) -> ImVec2 {
+    return (pos - screen_pos1 ) / zoom;
+  };
+  auto image_to_screen_coords = [zoom = zoom_ * rel_zoom, screen_pos1](ImVec2 pos) -> ImVec2 {
+    return pos * zoom + screen_pos1;
+  };
+
   ImGui::Image((void*)(intptr_t)texture_id, image_size);  // , uv0, uv1);
 
   ImGuiWindow* window = ImGui::GetCurrentWindow();
@@ -118,7 +126,7 @@ void App::drawImage()
        active_id == ImGui::GetScrollbarID(window, ImGuiAxis_Y));
 
   if (!any_scrollbar_active) {
-    ImVec2 image_pos = (io.MousePos - screen_pos1) / (zoom_ * rel_zoom);
+    ImVec2 image_pos = screen_to_image_coords(io.MousePos);
     int x = image_pos.x;
     int y = image_pos.y;
     cv::Vec3b col(draw_col_.z * 255, draw_col_.y * 255, draw_col_.x * 255);
@@ -151,6 +159,17 @@ void App::drawImage()
         ImVec2(p.x + hwd, p.y + hht),
         ImVec2(p.x + hwd, p.y - hht)
     };
+
+    bool in_image = true;
+    for (size_t i = 0; i < corners.size(); ++i) {
+      const ImVec2 image_pos = screen_to_image_coords(corners[i]);
+      if ((image_pos.x < 0) || (image_pos.y < 0) ||
+        (image_pos.x >= image.cols) || (image_pos.y >= image.rows)) {
+        in_image = false;
+      }
+    }
+
+    const auto col = in_image ? IM_COL32(0, 255, 0, 208) : IM_COL32(255, 0, 0, 208);
     for (size_t i = 0; i < corners.size(); ++i) {
       ImGui::GetWindowDrawList()->AddLine(
           corners[i],
@@ -160,7 +179,7 @@ void App::drawImage()
       ImGui::GetWindowDrawList()->AddLine(
           corners[i],
           corners[(i + 1) % corners.size()],
-          IM_COL32(255, 0, 0, 208), 2.0f);
+          col, 2.0f);
     }
   }
 
@@ -214,7 +233,7 @@ void App::draw()
 
   {
     pos = pos_;
-    sz = ImVec2(size_.x * 0.25, size_.y * 0.12);
+    sz = ImVec2(size_.x * 0.25, 32 * 4);  // TODO(lucasw) get text line height
     ImGui::SetNextWindowPos(pos);
     ImGui::SetNextWindowSize(sz);
     ImGui::Begin("controls", &is_open, window_flags_);
