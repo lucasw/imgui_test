@@ -56,6 +56,7 @@ public:
   float mouse_wheel_ = 0.0;
   bool mouse_over_image_ = false;
   float zoom_ = 1.0;
+  ImVec2 box_selection_size_ = ImVec2(128.0, 128.0);
 
   // float draw_col_[3] = {0.5, 0.5, 0.5};
   ImVec4 draw_col_ = ImVec4(0.5, 0.5, 0.5, 1.0);

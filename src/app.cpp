@@ -35,9 +35,14 @@ void App::drawControls()
   const bool height_changed = ImGui::SliderFloat("height", &tmp, 1.0, 512.0, "%1.0f", 2.0);
   height_ = tmp;
   #endif
-  const bool zoom_changed = ImGui::SliderFloat("zoom", &zoom_, 0.1, 64.0, "%1.1f", 2.0);
+  const bool zoom_changed = ImGui::SliderFloat("zoom", &zoom_, 0.1, 64.0, "%1.1f", 3.0);
   (void)zoom_changed;
 
+  const bool box_changed = ImGui::SliderFloat("box selection size",
+      &box_selection_size_.x, 4, 1024.0, "%1.0f", 3.0);
+  if (box_changed) {
+    box_selection_size_.y = box_selection_size_.x;
+  }
   #if 0
   if (width_changed || height_changed) {
     cv::resize(image_, image_, cv::Size(width_, height_), 0.0, 0.0, cv::INTER_NEAREST);
@@ -150,8 +155,8 @@ void App::drawImage()
 
   // draw a box where the mouse currently is
   {
-    const size_t hwd = 50;
-    const size_t hht = hwd;
+    const float hwd = box_selection_size_.x * 0.5;
+    const float hht = box_selection_size_.y * 0.5;
     ImVec2 p = io.MousePos;
     const std::vector<ImVec2> corners = {
         ImVec2(p.x - hwd, p.y - hht),
