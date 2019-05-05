@@ -1,9 +1,24 @@
+#include <experimental/filesystem>
 #include <imgui.h>
 #include <imgui_test/gl.h>
+#include <map>
 #include <opencv2/imgproc.hpp>
 
 namespace imgui_test
 {
+
+struct Image
+{
+  std::experimental::filesystem::path path_;
+
+  bool dirty_ = true;
+  bool load();
+  std::string msg_;
+
+  bool selected_ = false;
+  cv::Mat image_;
+  GLuint texture_id_ = 0;
+};
 
 class App
 {
@@ -13,8 +28,12 @@ public:
   void draw();
 
   std::string msg_;
-  std::string image_filename_;
+  // std::vector<std::experimental::filesystem::path> cur_files_;
+
+  std::map<std::experimental::filesystem::path, std::shared_ptr<Image>> images_;
+  std::experimental::filesystem::path cur_image_;
   bool droppedFile(const std::string name);
+  bool loadDirectory(const std::string name);
 
   void drawControls();
   void drawImage();
@@ -29,20 +48,19 @@ public:
   int hovered_x_ = 0;
   int hovered_y_ = 0;
 
-  cv::Mat image_;
+#if 0
+  int width_ = 0;
+  int height_ = 0;
+#endif
   float mouse_wheel_ = 0.0;
   bool mouse_over_image_ = false;
-  int width_ = 16;
-  int height_ = 16;
-  float zoom_ = 8.0;
+  float zoom_ = 1.0;
 
   // float draw_col_[3] = {0.5, 0.5, 0.5};
   ImVec4 draw_col_ = ImVec4(0.5, 0.5, 0.5, 1.0);
   ImVec2 pos_;
   ImVec2 size_;
   ImGuiWindowFlags window_flags_ = ImGuiWindowFlags_None;
-
-  GLuint texture_id_;
 };
 
 }  // namespace imgui_test

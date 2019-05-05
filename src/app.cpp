@@ -1,9 +1,15 @@
+#include <experimental/filesystem>
 #include <imgui_test/app.hpp>
 #include <imgui_test/utility.hpp>
+#include <iostream>
 #include <opencv2/highgui.hpp>
+#include <set>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui_internal.h>
+
+// the experimental goes away in g++ 8
+namespace fs = std::experimental::filesystem;
 
 namespace imgui_test
 {
@@ -16,43 +22,72 @@ App::App(const ImVec2 size) : size_(size)
   window_flags_ = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |
       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar |
       ImGuiWindowFlags_HorizontalScrollbar;  // | ImGuiWindowFlags_NoDecoration;
-
-  image_ = cv::Mat(cv::Size(width_, height_), CV_8UC3);
-  glTexFromMat(image_, texture_id_);
 }
 
 void App::drawControls()
 {
   // ImGui::Columns(2);
+  #if 0
   float tmp = width_;
   const bool width_changed = ImGui::SliderFloat("width", &tmp, 1.0, 512.0, "%1.0f", 2.0);
   width_ = tmp;
   tmp = height_;
   const bool height_changed = ImGui::SliderFloat("height", &tmp, 1.0, 512.0, "%1.0f", 2.0);
   height_ = tmp;
+  #endif
   const bool zoom_changed = ImGui::SliderFloat("zoom", &zoom_, 0.1, 64.0, "%1.1f", 2.0);
   (void)zoom_changed;
 
+  #if 0
   if (width_changed || height_changed) {
     cv::resize(image_, image_, cv::Size(width_, height_), 0.0, 0.0, cv::INTER_NEAREST);
     // dirty = true;
     glTexFromMat(image_, texture_id_);
   }
+  #endif
 
   ImGui::ColorEdit4("draw color", &draw_col_.x);
 
   // ImGui::NextColumn();
   // ImGui::Columns(1);
-  ImGui::Text("%s", image_filename_.c_str());
+  ImGui::Text("%s", cur_image_.filename().c_str());
   ImGui::Text("%s", msg_.c_str());
+  if (images_.count(cur_image_) > 0) {
+    ImGui::Text("%s", images_[cur_image_]->msg_.c_str());
+  }
+  ImGui::Separator();
+  {
+    // ImGui::Columns(2, NULL, false);
+    for (auto& pair : images_) {
+      const auto filename = pair.first.filename();
+      if (ImGui::Selectable(filename.c_str(), pair.second->selected_)) {
+        // std::cout << filename << " selected\n";
+        cur_image_ = pair.first;
+        images_[cur_image_]->load();
+      }
+    }
+    // ImGui::Columns(1);
+  }
 }
 
 void App::drawImage()
 {
   ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+  if (images_.count(cur_image_) < 1) {
+    return;
+  }
+
+  cv::Mat image = images_[cur_image_]->image_;
+  auto& texture_id = images_[cur_image_]->texture_id_;
+
+  if (image.empty()) {
+    return;
+  }
+
   ImVec2 image_size;
-  image_size.x = image_.cols * zoom_;
-  image_size.y = image_.rows * zoom_;
+  image_size.x = image.cols * zoom_;
+  image_size.y = image.rows * zoom_;
 
   ImVec2 win_sz = ImGui::GetWindowSize();
   bool dirty = false;
@@ -70,7 +105,7 @@ void App::drawImage()
     ImGui::SetCursorPosY((region_height - image_size.y) * 0.5);
   }
   ImVec2 screen_pos1 = ImGui::GetCursorScreenPos();
-  ImGui::Image((void*)(intptr_t)texture_id_, image_size);  // , uv0, uv1);
+  ImGui::Image((void*)(intptr_t)texture_id, image_size);  // , uv0, uv1);
 
   ImGuiWindow* window = ImGui::GetCurrentWindow();
   ImGuiID active_id = ImGui::GetActiveID();
@@ -84,13 +119,13 @@ void App::drawImage()
     int y = image_pos.y;
     cv::Vec3b col(draw_col_.z * 255, draw_col_.y * 255, draw_col_.x * 255);
     bool clicked = ImGui::IsMouseDown(0);
-    if ((x >= 0) && (y >= 0) && (x < image_.cols) && (y < image_.rows)) {
+    if ((x >= 0) && (y >= 0) && (x < image.cols) && (y < image.rows)) {
       // mouse_over_image = true;
       if (clicked) {
-        image_.at<cv::Vec3b>(y, x) = col;
+        image.at<cv::Vec3b>(y, x) = col;
         dirty = true;
       }
-      hovered_col_ = image_.at<cv::Vec3b>(y, x);
+      hovered_col_ = image.at<cv::Vec3b>(y, x);
       hovered_x_ = x;
       hovered_y_ = y;
     }
@@ -98,14 +133,19 @@ void App::drawImage()
 
   if (dirty) {
     // image_ = cv::Mat(cv::Size(width_, height_), CV_8UC3);
-    glTexFromMat(image_, texture_id_);
+    glTexFromMat(image, texture_id);
   }
-
 }
 
 void App::displayImageInfo()
 {
   // Draw small box with the hovered color in it
+  #if 0
+  if (image_filename_ != "") {
+    fs::path path = image_filename_;
+    ImGui::Text("%s", path.filename().c_str());
+  }
+  #endif
   ImGui::Text("%04d %04d, r %02x g %02x b %02x",
       hovered_x_, hovered_y_,
       hovered_col_[0], hovered_col_[1], hovered_col_[2]);
@@ -189,20 +229,75 @@ void App::draw()
 #endif
 }
 
-bool App::droppedFile(const std::string name)
+bool Image::load()
 {
+  if (!dirty_) {
+    return true;
+  }
+  std::string name = path_.string();
+
   if (name == "") return false;
   cv::Mat image = cv::imread(name, cv::IMREAD_COLOR);
   if (image.empty()) {
     msg_ = "Could not load image '" + name + "'";
     return false;
   }
-  image_ = image;
-  width_ = image_.cols;
-  height_ = image_.rows;
-  glTexFromMat(image_, texture_id_);
-  image_filename_ = name;
-  msg_ = "loaded dropped image '" + name + "'";
+  GLuint texture_id;
+  const bool rv = glTexFromMat(image, texture_id);
+
+  if (rv) {
+    image_ = image;
+    // width_ = image_.cols;
+    // height_ = image_.rows;
+    texture_id_ = texture_id;
+  }
+
+  dirty_ = false;
+  return rv;
+}
+
+bool App::droppedFile(const std::string name)
+{
+  return loadDirectory(name);
+}
+
+bool App::loadDirectory(const std::string name)
+{
+  if (name == "") {
+    return false;
+  }
+  msg_ = "loading directory of '" + name + "'";
+  std::cout << msg_ << "\n";
+
+  // get a list of all image from current directory
+  try {
+    const std::set<std::string> image_extensions = {".png", ".jpg", ".jpeg"};
+    // TODO(lucasw) ought to keep around the old images at least for a while,
+    // but for now dispense with them
+    std::map<std::experimental::filesystem::path, std::shared_ptr<Image>> images;
+    fs::path path = name;
+    const auto dir = path.parent_path();
+    std::cout << dir << ":\n";
+    for (const auto& entry : fs::directory_iterator(dir)) {
+      if (!fs::is_regular_file(entry.path())) {
+        continue;
+      }
+      if (image_extensions.count(entry.path().extension()) < 1) {
+        continue;
+      }
+      auto image = std::make_shared<Image>();
+      image->path_ = entry.path();
+      images[image->path_] = image;
+
+      // std::cout << entry.path().filename() << " " << entry.path().extension() << "\n";
+    }
+
+    images_ = images;
+  } catch (std::runtime_error& ex) {
+    std::cerr << ex.what() << "\n";
+    return false;
+  }
+
   return true;
 }
 
