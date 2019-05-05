@@ -117,7 +117,7 @@ void App::drawImage()
        active_id == ImGui::GetScrollbarID(window, ImGuiAxis_Y));
 
   if (!any_scrollbar_active) {
-    ImVec2 image_pos = (io.MousePos - screen_pos1) / zoom_;
+    ImVec2 image_pos = (io.MousePos - screen_pos1) / (zoom_ * rel_zoom);
     int x = image_pos.x;
     int y = image_pos.y;
     cv::Vec3b col(draw_col_.z * 255, draw_col_.y * 255, draw_col_.x * 255);
@@ -125,8 +125,8 @@ void App::drawImage()
     if ((x >= 0) && (y >= 0) && (x < image.cols) && (y < image.rows)) {
       // mouse_over_image = true;
       if (clicked) {
-        image.at<cv::Vec3b>(y, x) = col;
-        dirty = true;
+        // image.at<cv::Vec3b>(y, x) = col;
+        // dirty = true;
       }
       hovered_col_ = image.at<cv::Vec3b>(y, x);
       hovered_x_ = x;
@@ -138,6 +138,33 @@ void App::drawImage()
     // image_ = cv::Mat(cv::Size(width_, height_), CV_8UC3);
     glTexFromMat(image, texture_id);
   }
+
+  // draw a box where the mouse currently is
+  {
+    const size_t hwd = 50;
+    const size_t hht = hwd;
+    ImVec2 p = io.MousePos;
+    const std::vector<ImVec2> corners = {
+        ImVec2(p.x - hwd, p.y - hht),
+        ImVec2(p.x - hwd, p.y + hht),
+        ImVec2(p.x + hwd, p.y + hht),
+        ImVec2(p.x + hwd, p.y - hht)
+    };
+    for (size_t i = 0; i < corners.size(); ++i) {
+      ImGui::GetWindowDrawList()->AddLine(
+          corners[i],
+          corners[(i + 1) % corners.size()],
+          IM_COL32(0, 0, 0, 208), 4.0f);
+
+      ImGui::GetWindowDrawList()->AddLine(
+          corners[i],
+          corners[(i + 1) % corners.size()],
+          IM_COL32(255, 0, 0, 208), 2.0f);
+    }
+  }
+
+  // TODO(lucasw) if clicked, translate screen coords to image coords,
+  // store those coords in a map of vectors within the Image.
 }
 
 void App::displayImageInfo()
