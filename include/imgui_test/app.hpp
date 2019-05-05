@@ -36,6 +36,7 @@ public:
   bool loadDirectory(const std::string name);
 
   void drawControls();
+  void drawFiles();
   void drawImage();
   // draw the image that lies within the currently selected box,
   // or what would become the next image box if the user creates one at the current

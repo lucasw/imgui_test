@@ -55,19 +55,20 @@ void App::drawControls()
   if (images_.count(cur_image_) > 0) {
     ImGui::Text("%s", images_[cur_image_]->msg_.c_str());
   }
-  ImGui::Separator();
-  {
-    // ImGui::Columns(2, NULL, false);
-    for (auto& pair : images_) {
-      const auto filename = pair.first.filename();
-      if (ImGui::Selectable(filename.c_str(), pair.second->selected_)) {
-        // std::cout << filename << " selected\n";
-        cur_image_ = pair.first;
-        images_[cur_image_]->load();
-      }
+}
+
+void App::drawFiles()
+{
+  // ImGui::Columns(2, NULL, false);
+  for (auto& pair : images_) {
+    const auto filename = pair.first.filename();
+    if (ImGui::Selectable(filename.c_str(), pair.second->selected_)) {
+      // std::cout << filename << " selected\n";
+      cur_image_ = pair.first;
+      images_[cur_image_]->load();
     }
-    // ImGui::Columns(1);
   }
+  // ImGui::Columns(1);
 }
 
 void App::drawImage()
@@ -213,7 +214,7 @@ void App::draw()
 
   {
     pos = pos_;
-    sz = ImVec2(size_.x * 0.25, size_.y * 0.9);
+    sz = ImVec2(size_.x * 0.25, size_.y * 0.12);
     ImGui::SetNextWindowPos(pos);
     ImGui::SetNextWindowSize(sz);
     ImGui::Begin("controls", &is_open, window_flags_);
@@ -223,8 +224,21 @@ void App::draw()
     ImGui::End();
   }
 
+  // draw list of files
   {
-    pos = ImVec2(pos.x, pos.y + sz.y);
+    pos.y += sz.y;
+    sz = ImVec2(sz.x, size_.y * 0.6);
+    ImGui::SetNextWindowPos(pos);
+    ImGui::SetNextWindowSize(sz);
+    ImGui::Begin("files", &is_open, window_flags_);
+    if (is_open) {
+      drawFiles();
+    }
+    ImGui::End();
+  }
+
+  {
+    pos.y += sz.y;
     sz = ImVec2(sz.x, size_.y - sz.y);
     ImGui::SetNextWindowPos(pos);
     ImGui::SetNextWindowSize(sz);
