@@ -221,10 +221,24 @@ void App::drawImage()
             image_to_screen_coords(pt0), col2, 2.0f);
       }
     }
+
+
+    // draw a sub image of the current hovered position
+    {
+      ImGui::Begin("image info");  //, &is_open, window_flags_);
+      auto uv0 = screen_to_image_coords(corners[0]);
+      // TODO(lucasw) provide utility function for this
+      uv0.x /= image.cols;
+      uv0.y /= image.rows;
+      auto uv1 = screen_to_image_coords(corners[2]);
+      uv1.x /= image.cols;
+      uv1.y /= image.rows;
+      ImGui::Image((void*)(intptr_t)texture_id,
+          ImVec2(256.0, 256.0), uv0, uv1);
+      ImGui::End();
+    }
   }
 
-  // TODO(lucasw) if clicked, translate screen coords to image coords,
-  // store those coords in a map of vectors within the Image.
 }
 
 void App::displayImageInfo()
@@ -286,7 +300,7 @@ void App::draw()
   // draw list of files
   {
     pos.y += sz.y;
-    sz = ImVec2(sz.x, size_.y * 0.6);
+    sz = ImVec2(sz.x, size_.y - 280 - pos.y);
     ImGui::SetNextWindowPos(pos);
     ImGui::SetNextWindowSize(sz);
     ImGui::Begin("files", &is_open, window_flags_);
