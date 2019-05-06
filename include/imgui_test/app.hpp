@@ -7,6 +7,21 @@
 namespace imgui_test
 {
 
+struct Label;
+struct Image;
+
+struct Selection
+{
+  // upper left corner
+  ImVec2 pt_;
+  ImVec2 sz_;
+
+  // std::weak_ptr<Image> source_image_;
+  std::experimental::filesystem::path source_path_;
+  std::string label_;
+  cv::Mat sub_image_;
+};
+
 struct Image
 {
   std::experimental::filesystem::path path_;
@@ -18,6 +33,24 @@ struct Image
   bool selected_ = false;
   cv::Mat image_;
   GLuint texture_id_ = 0;
+
+  // map of all labels in this image
+  std::map<std::string, std::vector<Selection> > selections_;
+  // void export_selections(const size_t width, const size_t height);
+};
+
+struct Label
+{
+  std::string name_;
+  std::string description_;
+
+  // TODO(lucasw) color
+
+  // TODO(lucasw) maybe an image example to show in gui?
+
+  // TODO(lucasw) keyboard shortcut
+
+  // TODO(lucasw) links to all Selections of this class?
 };
 
 class App
@@ -28,8 +61,9 @@ public:
   void draw();
 
   std::string msg_;
-  // std::vector<std::experimental::filesystem::path> cur_files_;
 
+  std::map<std::string, Label> labels_;
+  std::string cur_label_;
   std::map<std::experimental::filesystem::path, std::shared_ptr<Image>> images_;
   std::experimental::filesystem::path cur_image_;
   bool droppedFile(const std::string name);

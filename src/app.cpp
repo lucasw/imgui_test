@@ -130,6 +130,7 @@ void App::drawImage()
       (active_id == ImGui::GetScrollbarID(window, ImGuiAxis_X) ||
        active_id == ImGui::GetScrollbarID(window, ImGuiAxis_Y));
 
+  bool add_selection = false;
   if (!any_scrollbar_active) {
     ImVec2 image_pos = screen_to_image_coords(io.MousePos);
     int x = image_pos.x;
@@ -141,6 +142,7 @@ void App::drawImage()
       if (clicked) {
         // image.at<cv::Vec3b>(y, x) = col;
         // dirty = true;
+        add_selection = true;
       }
       hovered_col_ = image.at<cv::Vec3b>(y, x);
       hovered_x_ = x;
@@ -173,6 +175,14 @@ void App::drawImage()
         in_image = false;
       }
     }
+    if (in_image && add_selection) {
+      Selection sel;
+      sel.pt_ = screen_to_image_coords(corners[0]);
+      sel.sz_ = screen_to_image_coords(corners[2]) - sel.pt_;
+      sel.source_path_ = cur_image_;
+      sel.label_ = cur_label_;
+      images_[cur_image_]->selections_[sel.label_].push_back(sel);
+    }
 
     const auto col = in_image ? IM_COL32(0, 255, 0, 208) : IM_COL32(255, 0, 0, 208);
     for (size_t i = 0; i < corners.size(); ++i) {
@@ -185,6 +195,31 @@ void App::drawImage()
           corners[i],
           corners[(i + 1) % corners.size()],
           col, 2.0f);
+    }
+
+    const auto col2 = IM_COL32(255, 255, 0, 208);
+    for (const auto& pair : images_[cur_image_]->selections_) {
+      for (const auto& sel : pair.second) {
+        const auto pt0 = sel.pt_;
+        auto pt1 = pt0;
+        pt1.y += sel.sz_.y;
+        ImGui::GetWindowDrawList()->AddLine(
+            image_to_screen_coords(pt0),
+            image_to_screen_coords(pt1), col2, 2.0f);
+        auto pt2 = pt1;
+        pt2.x += sel.sz_.x;
+        ImGui::GetWindowDrawList()->AddLine(
+            image_to_screen_coords(pt1),
+            image_to_screen_coords(pt2), col2, 2.0f);
+        auto pt3 = pt2;
+        pt3.y -= sel.sz_.y;
+        ImGui::GetWindowDrawList()->AddLine(
+            image_to_screen_coords(pt2),
+            image_to_screen_coords(pt3), col2, 2.0f);
+        ImGui::GetWindowDrawList()->AddLine(
+            image_to_screen_coords(pt3),
+            image_to_screen_coords(pt0), col2, 2.0f);
+      }
     }
   }
 
